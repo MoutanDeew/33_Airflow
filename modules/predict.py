@@ -10,7 +10,8 @@ path = os.environ.get('PROJECT_PATH', '.')
 
 
 def predict():
-    with open(f'{path}/data/models/cars_pipe_202305311142.pkl', 'rb') as file:
+    latest_model = sorted(os.listdir(f'{path}/data/models'))[-1]
+    with open(f'{path}/data/models/{latest_model}', 'rb') as file:
         best_model = dill.load(file)
 
     df_pred = pd.DataFrame(columns=['car_id', 'pred'])
