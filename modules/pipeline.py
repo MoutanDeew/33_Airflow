@@ -21,7 +21,7 @@ from sklearn.svm import SVC
 path = os.environ.get('PROJECT_PATH', '.')
 
 
-def filter_data(df: pd.DataFrame) -> pd.DataFrame:
+def filter_data(df: pd.DataFrame) -> pd.DataFrame: #функция для удаления ненужных столбцов датафрейма
     columns_to_drop = [
         'id',
         'url',
@@ -38,8 +38,8 @@ def filter_data(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop(columns_to_drop, axis=1)
 
 
-def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
-    def calculate_outliers(data):
+def remove_outliers(df: pd.DataFrame) -> pd.DataFrame: #функция для удалени выбросов в данных
+    def calculate_outliers(data): #функция распределения данных по квантилям
         q25 = data.quantile(0.25)
         q75 = data.quantile(0.75)
         iqr = q75 - q25
@@ -53,7 +53,7 @@ def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def create_features(df: pd.DataFrame) -> pd.DataFrame:
+def create_features(df: pd.DataFrame) -> pd.DataFrame: #функция создания новых фичей в данных
     def short_model(x):
         if not pd.isna(x):
             return x.lower().split(' ')[0]
@@ -66,42 +66,42 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def pipeline() -> None:
+def pipeline() -> None: #создаём работающий пайплайн
     df = pd.read_csv(f'{path}/data/train/homework.csv')
 
-    X = df.drop('price_category', axis=1)
+    X = df.drop('price_category', axis=1) #делим датафрейм на целевую переменную и остальные данные
     y = df['price_category']
 
-    numerical_features = make_column_selector(dtype_include=['int64', 'float64'])
+    numerical_features = make_column_selector(dtype_include=['int64', 'float64']) #разделяем данные на численные переменные и категориальные
     categorical_features = make_column_selector(dtype_include=object)
 
     numerical_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
-    ])
+    ]) #пайплайн обработки для числовых значений 
 
     categorical_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='most_frequent')),
         ('encoder', OneHotEncoder(handle_unknown='ignore'))
-    ])
+    ]) #пайплайн обработки для категориальных данных
 
     column_transformer = ColumnTransformer(transformers=[
         ('numerical', numerical_transformer, numerical_features),
         ('categorical', categorical_transformer, categorical_features)
-    ])
+    ]) #трансформируем все колонки к нужно виду
 
     preprocessor = Pipeline(steps=[
         ('filter', FunctionTransformer(filter_data)),
         ('outlier_remover', FunctionTransformer(remove_outliers)),
         ('feature_creator', FunctionTransformer(create_features)),
         ('column_transformer', column_transformer)
-    ])
+    ]) #определяем порядок выполнения всего пайплайна
 
     models = [
         LogisticRegression(solver='liblinear'),
         RandomForestClassifier(),
         SVC()
-    ]
+    ] #объявляем все необходимые ML-модели
 
     best_score = .0
     best_pipe = None
@@ -110,9 +110,9 @@ def pipeline() -> None:
         pipe = Pipeline([
             ('preprocessor', preprocessor),
             ('classifier', model)
-        ])
+        ]) #соединяем обработанный данные с ML-моделями
 
-        score = cross_val_score(pipe, X, y, cv=4, scoring='accuracy')
+        score = cross_val_score(pipe, X, y, cv=4, scoring='accuracy') #объявляем параметры для кросс валидации
         logging.info(f'model: {type(model).__name__}, acc_mean: {score.mean():.4f}, acc_std: {score.std():.4f}')
         if score.mean() > best_score:
             best_score = score.mean()
@@ -121,7 +121,7 @@ def pipeline() -> None:
     logging.info(f'best model: {type(best_pipe.named_steps["classifier"]).__name__}, accuracy: {best_score:.4f}')
 
     best_pipe.fit(X, y)
-    model_filename = f'{path}/data/models/cars_pipe_{datetime.now().strftime("%Y%m%d%H%M")}.pkl'
+    model_filename = f'{path}/data/models/cars_pipe_{datetime.now().strftime("%Y%m%d%H%M")}.pkl' #сириализуем лучшую ML-модель в пикл файл
 
     with open(model_filename, 'wb') as file:
         dill.dump(best_pipe, file)
