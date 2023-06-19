@@ -9,7 +9,7 @@ import pandas as pd
 path = os.environ.get('PROJECT_PATH', '.')
 
 
-def predict():
+def predict(): #функция дисириализации лучшей последней ML-модели и предсказания целевой переменной на новых JSON данных
     latest_model = sorted(os.listdir(f'{path}/data/models'))[-1]
     with open(f'{path}/data/models/{latest_model}', 'rb') as file:
         best_model = dill.load(file)
